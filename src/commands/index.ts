@@ -59,22 +59,23 @@ async function generateFiles(files: { path: string, content: string }[]): Promis
         try {
             // Ensure the directory exists
             await fs.ensureDir(path.dirname(fullPath));
-
             // Check if file exists
             const fileExists = await fs.pathExists(fullPath);
 
             if (fileExists) {
-                // Read existing content
                 const existingContent = await fs.readFile(fullPath, 'utf8');
-
-                // If content is different, update the file
-                if (existingContent.trim() !== file.content.trim()) {
-                    await fs.writeFile(fullPath, file.content);
-                    processedFiles.push(`Updated: ${file.path}`);
-                } else {
-                    processedFiles.push(`Skipped (no changes): ${file.path}`);
+                // Check if the new content is already present in the file
+                if (existingContent.includes(file.content.trim())) {
+                    processedFiles.push(`Skipped (already exists): ${file.path}`);
+                    continue;
                 }
+
+                // Append new content to existing content with a separator
+                const updatedContent = existingContent.trim() + '\n\n' + file.content.trim();
+                await fs.writeFile(fullPath, updatedContent);
+                processedFiles.push(`Updated (appended): ${file.path}`);
             } else {
+                // For new files, just write the content
                 await fs.writeFile(fullPath, file.content);
                 processedFiles.push(`Created: ${file.path}`);
             }
@@ -82,9 +83,9 @@ async function generateFiles(files: { path: string, content: string }[]): Promis
             vscode.window.showErrorMessage(`Error processing file ${file.path}: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
-
     return processedFiles;
 }
+
 async function handleDifyResponse(
     difyApiService: DifyApiService,
     question: string,
