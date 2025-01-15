@@ -23,4 +23,8 @@ export class StatusBarManager {
     public getStatusBarItem(): vscode.StatusBarItem {
         return this.statusBarItem;
     }
+
+    public updateStatus(text: string): void {
+        this.statusBarItem.text = text;
+    }
 }

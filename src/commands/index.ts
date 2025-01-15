@@ -2,28 +2,30 @@ import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 import { ProjectStructure, DIFYContext } from '../types';
-import { DifyApiService, FileSystemService, ProjectContextService } from '../services';
+import { DifyApiService, FileSystemService, ProjectContextService, StateManager } from '../services';
+import { StatusBarManager } from '../ui';
 
 let projectStructure: ProjectStructure = null;
 
 export function registerCommands(context: vscode.ExtensionContext) {
     const fileSystemService = FileSystemService.getInstance();
     const difyApiService = DifyApiService.getInstance();
+    const stateManager = StateManager.getInstance();
 
     const analyzeCommand = vscode.commands.registerCommand(
         'difyassistant.analyzeProject',
-        createAnalyzeProjectCommand(fileSystemService)
+        createAnalyzeProjectCommand(fileSystemService, stateManager)
     );
 
     const askCommand = vscode.commands.registerCommand(
         'difyassistant.askQuestion',
-        createAskQuestionCommand(difyApiService)
+        createAskQuestionCommand(difyApiService, stateManager)
     );
 
     context.subscriptions.push(analyzeCommand, askCommand);
 }
 
-function createAnalyzeProjectCommand(fileSystemService: FileSystemService) {
+function createAnalyzeProjectCommand(fileSystemService: FileSystemService, stateManager: StateManager) {
     return async () => {
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
         if (!workspaceRoot) {
@@ -36,9 +38,13 @@ function createAnalyzeProjectCommand(fileSystemService: FileSystemService) {
             title: "Analyzing project structure...",
             cancellable: false
         }, async () => {
-            projectStructure = await fileSystemService.analyzeProjectStructure(workspaceRoot);
-            console.log(projectStructure);
+            const projectStructure = await fileSystemService.analyzeProjectStructure(workspaceRoot);
+            stateManager.setProjectStructure(projectStructure);
+            console.log('Project structure:', projectStructure);
             vscode.window.showInformationMessage('Project structure analysis complete');
+            
+            const statusBarManager = StatusBarManager.getInstance();
+            statusBarManager.updateStatus('Project analyzed ✓');
         });
     };
 }
@@ -115,14 +121,14 @@ async function handleDifyResponse(
 
                     if (Array.isArray(filesToGenerate) && filesToGenerate.length > 0) {
                         outputChannel.appendLine('\nGenerating files...');
-                        
+
                         // Log each file to be generated
                         filesToGenerate.forEach(file => {
                             console.log('Processing file:', file.path);
                         });
 
                         const processedFiles = await generateFiles(filesToGenerate);
-                        
+
                         outputChannel.appendLine('\nFiles Generated:');
                         processedFiles.forEach(file => {
                             outputChannel.appendLine(file);
@@ -152,14 +158,31 @@ async function handleDifyResponse(
     }
 }
 
-function createAskQuestionCommand(difyApiService: DifyApiService) {
+function createAskQuestionCommand(
+    difyApiService: DifyApiService,
+    stateManager: StateManager
+) {
     let conversationContext: DIFYContext = {};
     const contextService = ProjectContextService.getInstance();
+    const outputChannel = vscode.window.createOutputChannel('DIFY Assistant');
 
     return async () => {
+        const projectStructure = stateManager.getProjectStructure();
         if (!projectStructure) {
-            vscode.window.showErrorMessage('Please analyze the project structure first');
-            return;
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+            if (workspaceRoot) {
+                try {
+                    const fileSystemService = FileSystemService.getInstance();
+                    const newStructure = await fileSystemService.analyzeProjectStructure(workspaceRoot);
+                    stateManager.setProjectStructure(newStructure);
+                } catch (error) {
+                    vscode.window.showErrorMessage('Failed to analyze project structure. Please try running the analyze command manually.');
+                    return;
+                }
+            } else {
+                vscode.window.showErrorMessage('No workspace folder found');
+                return;
+            }
         }
 
         const question = await vscode.window.showInputBox({
@@ -170,10 +193,9 @@ function createAskQuestionCommand(difyApiService: DifyApiService) {
         if (!question) return;
 
         try {
-            // Generate concise project context
-            const projectSummary = contextService.generateProjectSummary(projectStructure);
+            const currentStructure = stateManager.getProjectStructure();
+            const projectSummary = contextService.generateProjectSummary(currentStructure!);
 
-            // Get current file context if available
             let fileContext = '';
             if (vscode.window.activeTextEditor) {
                 const currentFile = vscode.window.activeTextEditor.document;
@@ -185,23 +207,23 @@ function createAskQuestionCommand(difyApiService: DifyApiService) {
 
             // Combine question with context
             const enhancedQuery = `
-Context:
-${projectSummary}
-${fileContext}
+                Context:
+                ${projectSummary}
+                ${fileContext}
 
-Question: ${question}
+                Question: ${question}
 
-Note: If you need to generate or update files, please provide the file generation instructions in the following JSON format wrapped in a code block:
+                Note: If you need to generate or update files, please provide the file generation instructions in the following JSON format wrapped in a code block:
 
-\`\`\`json files
-[
-    {
-        "path": "relative/path/to/file.ts",
-        "content": "file content here"
-    }
-]
-\`\`\`
-`;
+                \`\`\`json files
+                [
+                    {
+                        "path": "relative/path/to/file.ts",
+                        "content": "file content here"
+                    }
+                ]
+                \`\`\`
+            `;
 
             const initialContext: DIFYContext = {
                 ...conversationContext,
