@@ -11,10 +11,31 @@
     ],
     "activationEvents": [
         "onCommand:difyassistant.analyzeProject",
-        "onCommand:difyassistant.askQuestion"
+        "onCommand:difyassistant.askQuestion",
+        "onView:difyassistant-sidebar"
     ],
     "main": "./out/extension.js",
     "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "difyassistant",
+                    "title": "DIFY Assistant",
+                    "icon": "resources/sidebar-icon.svg"
+                }
+            ]
+        },
+        "views": {
+            "difyassistant": [
+                {
+                    "type": "webview",
+                    "id": "difyassistant-sidebar",
+                    "name": "DIFY Assistant",
+                    "visibility": "visible",
+                    "when": "workspaceHasFolder"
+                }
+            ]
+        },
         "commands": [
             {
                 "command": "difyassistant.analyzeProject",

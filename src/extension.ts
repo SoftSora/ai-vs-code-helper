@@ -1,14 +1,22 @@
 import * as vscode from 'vscode';
-import { DifyApiService, ProjectStructure, registerCommands, StatusBarManager } from './';
+import { DifyApiService, ProjectStructure, registerCommands, SidebarProvider, StatusBarManager } from './';
 
 export let globalProjectStructure: ProjectStructure | null = null;
 
 export async function activate(context: vscode.ExtensionContext) {
     await DifyApiService.initialize(context);
     console.log("DIFY AI assistant is activated");
-    
+
+    const sidebarProvider = new SidebarProvider(context.extensionUri, context);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(
+            SidebarProvider.viewType,
+            sidebarProvider
+        )
+    );
+
     await analyzeProjectOnStart(context);
-    
+
     registerCommands(context);
     const statusBarManager = StatusBarManager.getInstance();
     context.subscriptions.push(statusBarManager.getStatusBarItem());
