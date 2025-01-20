@@ -12,7 +12,8 @@
     "activationEvents": [
         "onCommand:difyassistant.analyzeProject",
         "onCommand:difyassistant.askQuestion",
-        "onView:difyassistant-sidebar"
+        "onView:difyassistant-sidebar",
+        "workspaceContains:**/*"
     ],
     "main": "./out/extension.js",
     "contributes": {
@@ -44,6 +45,10 @@
             {
                 "command": "difyassistant.askQuestion",
                 "title": "DIFY: Ask Question About Codebase"
+            },
+            {
+                "command": "difyassistant.openSidebar",
+                "title": "DIFY: Open DIFY Assistant Sidebar"
             }
         ]
     },

@@ -15,8 +15,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         context: vscode.WebviewViewResolveContext,
         _token: vscode.CancellationToken,
     ) {
-        this._view = webviewView;
+        console.log('Webview resolved');
 
+        this._view = webviewView;
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
@@ -25,6 +26,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
         webviewView.webview.onDidReceiveMessage(async (data) => {
+
+            console.log('Message received:', data);
+
             switch (data.type) {
                 case 'analyze-project':
                     vscode.commands.executeCommand('difyassistant.analyzeProject');

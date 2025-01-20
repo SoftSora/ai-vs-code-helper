@@ -1,6 +1,8 @@
-<svg width="24" height="24" viewBox="0 0 24 24">
-    <path 
-        fill="#424242" 
-        d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-2 12h-3v3h-2v-3H9v-2h3V8h2v5h3v2z"
-    />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Code Brackets -->
+  <path d="M20,30 L20,70 L40,70 L40,80 L10,80 L10,20 L40,20 L40,30 L20,30 Z" fill="black"/>
+  <path d="M80,30 L80,70 L60,70 L60,80 L90,80 L90,20 L60,20 L60,30 L80,30 Z" fill="black"/>
+  
+  <!-- Chat Bubble -->
+  <path d="M50,10 C30,10 20,20 20,40 L20,60 L40,60 L40,80 L60,60 L80,60 C80,40 70,10 50,10 Z" fill="none" stroke="black" stroke-width="5"/>
 </svg>

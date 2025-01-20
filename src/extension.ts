@@ -15,11 +15,19 @@ export async function activate(context: vscode.ExtensionContext) {
         )
     );
 
+    console.log("Sidebar provider registered");
+
     await analyzeProjectOnStart(context);
 
     registerCommands(context);
     const statusBarManager = StatusBarManager.getInstance();
     context.subscriptions.push(statusBarManager.getStatusBarItem());
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('difyassistant.openSidebar', () => {
+            vscode.commands.executeCommand('workbench.view.extension.difyassistant-sidebar');
+        })
+    );
 
     context.subscriptions.push(
         vscode.workspace.onDidChangeWorkspaceFolders(async () => {
