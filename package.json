@@ -12,7 +12,9 @@
     "activationEvents": [
         "onCommand:difyassistant.analyzeProject",
         "onCommand:difyassistant.askQuestion",
+        "onCommand:difyassistant.refreshTree",
         "onView:difyassistant-sidebar",
+        "onView:difyassistant.treeView",
         "workspaceContains:**/*"
     ],
     "main": "./out/extension.js",
@@ -29,11 +31,19 @@
         "views": {
             "difyassistant": [
                 {
-                    "type": "webview",
                     "id": "difyassistant-sidebar",
                     "name": "DIFY Assistant",
+                    "type": "webview",
+                    "icon": "resources/sidebar-icon.svg",
                     "visibility": "visible",
                     "when": "workspaceHasFolder"
+                }
+            ],
+            "explorer": [
+                {
+                    "id": "difyassistant.treeView",
+                    "name": "DIFY Project Structure",
+                    "icon": "resources/sidebar-icon.svg"
                 }
             ]
         },
@@ -49,8 +59,21 @@
             {
                 "command": "difyassistant.openSidebar",
                 "title": "DIFY: Open DIFY Assistant Sidebar"
+            },
+            {
+                "command": "difyassistant.refreshTree",
+                "title": "DIFY: Refresh Project Structure"
             }
-        ]
+        ],
+        "menus": {
+            "view/title": [
+                {
+                    "command": "difyassistant.refreshTree",
+                    "when": "view == difyassistant.treeView",
+                    "group": "navigation"
+                }
+            ]
+        }
     },
     "scripts": {
         "vscode:prepublish": "npm run compile",

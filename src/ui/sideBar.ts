@@ -8,7 +8,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly _extensionContext: vscode.ExtensionContext
-    ) {}
+    ) { }
 
     public resolveWebviewView(
         webviewView: vscode.WebviewView,
@@ -26,7 +26,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
         webviewView.webview.onDidReceiveMessage(async (data) => {
-
             console.log('Message received:', data);
 
             switch (data.type) {
@@ -35,6 +34,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     break;
                 case 'ask-question':
                     vscode.commands.executeCommand('difyassistant.askQuestion');
+                    break;
+                case 'refresh-tree':
+                    vscode.commands.executeCommand('difyassistant.refreshTree');
                     break;
             }
         });
@@ -71,6 +73,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <div>
                     <button id="analyzeBtn">Analyze Project</button>
                     <button id="askBtn">Ask Question</button>
+                    <button id="refreshTreeBtn">Refresh Project Structure</button>
                 </div>
 
                 <script nonce="${nonce}">
@@ -82,6 +85,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     
                     document.getElementById('askBtn').addEventListener('click', () => {
                         vscode.postMessage({ type: 'ask-question' });
+                    });
+
+                    document.getElementById('refreshTreeBtn').addEventListener('click', () => {
+                        vscode.postMessage({ type: 'refresh-tree' });
                     });
                 </script>
             </body>

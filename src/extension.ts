@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { DifyApiService, ProjectStructure, registerCommands, SidebarProvider, StatusBarManager } from './';
+import { MyTreeDataProvider } from './ui';
 
 export let globalProjectStructure: ProjectStructure | null = null;
 
@@ -16,6 +17,10 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     console.log("Sidebar provider registered");
+
+    // Register the tree data provider
+    const myTreeDataProvider = new MyTreeDataProvider();
+    vscode.window.registerTreeDataProvider('difyassistant.treeView', myTreeDataProvider);
 
     await analyzeProjectOnStart(context);
 

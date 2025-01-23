@@ -4,6 +4,7 @@ import * as path from 'path';
 import { ProjectStructure, DIFYContext } from '../types';
 import { DifyApiService, FileSystemService, ProjectContextService, StateManager } from '../services';
 import { StatusBarManager } from '../ui';
+import { MyTreeDataProvider } from '../ui/treeView';
 
 let projectStructure: ProjectStructure = null;
 
@@ -22,7 +23,15 @@ export function registerCommands(context: vscode.ExtensionContext) {
         createAskQuestionCommand(difyApiService, stateManager)
     );
 
-    context.subscriptions.push(analyzeCommand, askCommand);
+    const refreshTreeCommand = vscode.commands.registerCommand(
+        'difyassistant.refreshTree',
+        () => {
+            const treeDataProvider = new MyTreeDataProvider();
+            vscode.window.registerTreeDataProvider('difyassistant.treeView', treeDataProvider);
+        }
+    );
+
+    context.subscriptions.push(analyzeCommand, askCommand, refreshTreeCommand);
 }
 
 function createAnalyzeProjectCommand(fileSystemService: FileSystemService, stateManager: StateManager) {
@@ -105,48 +114,14 @@ async function handleDifyResponse(
         outputChannel.appendLine('\nResponse:');
         outputChannel.appendLine(response.answer);
 
-        // More flexible pattern matching for JSON blocks
-        const jsonBlocks = response.answer.match(/```(?:json files?|json)\s*([\s\S]*?)```/gmi);
-        console.log('Found JSON blocks:', jsonBlocks);
-
-        if (jsonBlocks) {
-            for (const block of jsonBlocks) {
-                try {
-                    // Clean the JSON content - remove the ```json or ```json files wrapper
-                    const jsonContent = block.replace(/```(?:json files?|json)\s*|```/gi, '').trim();
-                    console.log('Cleaned JSON content:', jsonContent);
-
-                    const filesToGenerate = JSON.parse(jsonContent);
-                    console.log('Parsed files:', filesToGenerate);
-
-                    if (Array.isArray(filesToGenerate) && filesToGenerate.length > 0) {
-                        outputChannel.appendLine('\nGenerating files...');
-
-                        // Log each file to be generated
-                        filesToGenerate.forEach(file => {
-                            console.log('Processing file:', file.path);
-                        });
-
-                        const processedFiles = await generateFiles(filesToGenerate);
-
-                        outputChannel.appendLine('\nFiles Generated:');
-                        processedFiles.forEach(file => {
-                            outputChannel.appendLine(file);
-                            console.log('Generated:', file);
-                        });
-
-                        vscode.window.showInformationMessage(
-                            `Successfully generated ${processedFiles.length} file(s)`
-                        );
-                    }
-                } catch (parseError: any) {
-                    console.error('Error parsing JSON:', parseError);
-                    outputChannel.appendLine(`\nError parsing file instructions: ${parseError.message}`);
-                }
+        // Parse the response for code generation instructions
+        const codeBlocks = response.answer.match(/```(?:typescript|javascript|json)\s*([\s\S]*?)```/gmi);
+        if (codeBlocks) {
+            for (const block of codeBlocks) {
+                const codeContent = block.replace(/```(?:typescript|javascript|json)\s*|```/gi, '').trim();
+                // Generate or update files based on the code content
+                // You can use the `generateFiles` function here
             }
-        } else {
-            console.log('No JSON blocks found in response');
-            outputChannel.appendLine('\nNo file generation instructions found');
         }
 
         outputChannel.show();

@@ -3,6 +3,7 @@ import { ProjectStructure } from '../types';
 export class StateManager {
     private static instance: StateManager;
     private projectStructure: ProjectStructure | null = null;
+    private listeners: Array<() => void> = [];
 
     private constructor() {}
 
@@ -15,9 +16,18 @@ export class StateManager {
 
     public setProjectStructure(structure: ProjectStructure) {
         this.projectStructure = structure;
+        this.notifyListeners();
     }
 
     public getProjectStructure(): ProjectStructure | null {
         return this.projectStructure;
+    }
+
+    public onProjectStructureChanged(listener: () => void): void {
+        this.listeners.push(listener);
+    }
+
+    private notifyListeners(): void {
+        this.listeners.forEach(listener => listener());
     }
 }
