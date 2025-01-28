@@ -1,33 +1,26 @@
-import { ProjectStructure } from '../types';
+import * as vscode from 'vscode';
 
 export class StateManager {
     private static instance: StateManager;
-    private projectStructure: ProjectStructure | null = null;
-    private listeners: Array<() => void> = [];
+    private projectStructure: any;
+    public context: vscode.ExtensionContext;
 
-    private constructor() {}
+    private constructor(context: vscode.ExtensionContext) {
+        this.context = context;
+    }
 
-    public static getInstance(): StateManager {
+    public static getInstance(context: vscode.ExtensionContext): StateManager {
         if (!StateManager.instance) {
-            StateManager.instance = new StateManager();
+            StateManager.instance = new StateManager(context);
         }
         return StateManager.instance;
     }
 
-    public setProjectStructure(structure: ProjectStructure) {
+    public setProjectStructure(structure: any): void {
         this.projectStructure = structure;
-        this.notifyListeners();
     }
 
-    public getProjectStructure(): ProjectStructure | null {
+    public getProjectStructure(): any {
         return this.projectStructure;
-    }
-
-    public onProjectStructureChanged(listener: () => void): void {
-        this.listeners.push(listener);
-    }
-
-    private notifyListeners(): void {
-        this.listeners.forEach(listener => listener());
     }
 }

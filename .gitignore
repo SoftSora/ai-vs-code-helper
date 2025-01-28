@@ -1,5 +1,4 @@
-/node_modules
-/out
-config.secure.ts
+node_modules
+out
 
-*.vsix
+*.vsiz

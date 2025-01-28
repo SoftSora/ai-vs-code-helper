@@ -5,12 +5,7 @@ export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;
 
     private constructor() {
-        this.statusBarItem = vscode.window.createStatusBarItem(
-            vscode.StatusBarAlignment.Right
-        );
-        this.statusBarItem.text = "$(symbol-structure) DIFY Assistant";
-        this.statusBarItem.command = 'difyassistant.askQuestion';
-        this.statusBarItem.show();
+        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
     }
 
     public static getInstance(): StatusBarManager {
@@ -20,11 +15,12 @@ export class StatusBarManager {
         return StatusBarManager.instance;
     }
 
-    public getStatusBarItem(): vscode.StatusBarItem {
-        return this.statusBarItem;
-    }
-
     public updateStatus(text: string): void {
         this.statusBarItem.text = text;
+        this.statusBarItem.show();
+    }
+
+    public hideStatus(): void {
+        this.statusBarItem.hide();
     }
 }

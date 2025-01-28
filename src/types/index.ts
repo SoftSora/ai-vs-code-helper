@@ -1,2 +1,1 @@
-export * from './dify.type';
-export * from './structure.type';
+export * from './structure.type'

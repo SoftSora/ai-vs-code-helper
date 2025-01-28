@@ -1,9 +1,8 @@
-import { SUPPORTED_EXTENSIONS } from '../config';
-import { DirectoryStructure, FileStructure } from '../types';
+import { ProjectStructure, DirectoryStructure, FileStructure } from '../types';
+import { Logger } from '../utils/logger';
 
 export class ProjectContextService {
     private static instance: ProjectContextService;
-    // private maxSummaryLength = 3000;
 
     private constructor() {}
 
@@ -14,9 +13,13 @@ export class ProjectContextService {
         return ProjectContextService.instance;
     }
 
-    public generateProjectSummary(structure: DirectoryStructure): string {
-        const summary = this.summarizeStructure(structure);
-        return `Project Structure Summary:\n${summary}`;
+    public generateProjectSummary(structure: ProjectStructure): string {
+        try {
+            return this.summarizeStructure(structure);
+        } catch (error) {
+            Logger.error('Error generating project summary:', error);
+            return 'Unable to generate project summary.';
+        }
     }
 
     private summarizeStructure(structure: DirectoryStructure, depth: number = 0): string {
@@ -26,60 +29,34 @@ export class ProjectContextService {
         for (const [name, item] of Object.entries(structure)) {
             if (this.shouldIncludeInSummary(name, item)) {
                 if (this.isFile(item)) {
-                    // For files, include name and brief content summary
-                    const fileType = this.getFileType(name);
-                    summary += `${indent}- ${name} (${fileType})\n`;
+                    // Summarize file
+                    summary += `${indent}- ${name} (${item.extension})\n`;
                 } else {
-                    // For directories, recursively summarize content
+                    // Summarize directory
                     summary += `${indent}+ ${name}/\n`;
                     summary += this.summarizeStructure(item as DirectoryStructure, depth + 1);
                 }
             }
         }
+
         return summary;
     }
 
-    private isFile(item: FileStructure | DirectoryStructure): item is FileStructure {
-        return (item as FileStructure).type === 'file';
-    }
-
-    private getFileType(fileName: string): string {
-        const ext = fileName.split('.').pop()?.toLowerCase() || '';
-        return ext;
-    }
-
     private shouldIncludeInSummary(name: string, item: FileStructure | DirectoryStructure): boolean {
+        // Exclude common directories and files
         if (name.startsWith('.') || name === 'node_modules' || name === 'dist') {
             return false;
         }
 
+        // Include only files with supported extensions
         if (this.isFile(item)) {
-            return SUPPORTED_EXTENSIONS.some(ext => name.endsWith(ext));
+            return ['.js', '.ts', '.py', '.java', '.html', '.css'].includes(item.extension); // Add more extensions as needed
         }
 
         return true;
     }
 
-    public generateFileContext(filePath: string, content: string): string {
-        // Generate context for the current file being discussed
-        return `Current File (${filePath}):\n${this.summarizeFileContent(content)}`;
-    }
-
-    private summarizeFileContent(content: string): string {
-        // Extract important parts of the file (e.g., class/function names)
-        const lines = content.split('\n');
-        const summary = lines
-            .filter(line => this.isImportantLine(line))
-            .slice(0, 15) // Limit to first 15 important lines
-            .join('\n');
-        return summary;
-    }
-
-    private isImportantLine(line: string): boolean {
-        return line.includes('class ') ||
-            line.includes('function ') ||
-            line.includes('interface ') ||
-            line.includes('export ') ||
-            line.includes('import ');
+    private isFile(item: FileStructure | DirectoryStructure): item is FileStructure {
+        return (item as FileStructure).type === 'file';
     }
 }

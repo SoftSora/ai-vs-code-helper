@@ -1,102 +1,48 @@
 {
-    "name": "vscode-dify-assistant",
-    "displayName": "VS Code DIFY Assistant",
-    "description": "AI-powered code understanding with DIFY integration",
+    "name": "my-vscode-extension",
+    "displayName": "My VS Code Extension",
+    "description": "A basic VS Code extension with a left sidebar.",
     "version": "0.0.1",
+    "publisher": "arshed",
     "engines": {
-        "vscode": "^1.60.0"
+        "vscode": "^1.75.0"
     },
     "categories": [
         "Other"
     ],
     "activationEvents": [
-        "onCommand:difyassistant.analyzeProject",
-        "onCommand:difyassistant.askQuestion",
-        "onCommand:difyassistant.refreshTree",
-        "onView:difyassistant-sidebar",
-        "onView:difyassistant.treeView",
-        "workspaceContains:**/*"
+        "onView:myView"
     ],
     "main": "./out/extension.js",
     "contributes": {
         "viewsContainers": {
             "activitybar": [
                 {
-                    "id": "difyassistant",
-                    "title": "DIFY Assistant",
-                    "icon": "resources/sidebar-icon.svg"
+                    "id": "mySidebar",
+                    "title": "My Sidebar",
+                    "icon": "resources/icon.svg"
                 }
             ]
         },
         "views": {
-            "difyassistant": [
+            "mySidebar": [
                 {
-                    "id": "difyassistant-sidebar",
-                    "name": "DIFY Assistant",
-                    "type": "webview",
-                    "icon": "resources/sidebar-icon.svg",
-                    "visibility": "visible",
-                    "when": "workspaceHasFolder"
-                }
-            ],
-            "explorer": [
-                {
-                    "id": "difyassistant.treeView",
-                    "name": "DIFY Project Structure",
-                    "icon": "resources/sidebar-icon.svg"
-                }
-            ]
-        },
-        "commands": [
-            {
-                "command": "difyassistant.analyzeProject",
-                "title": "DIFY: Analyze Project Structure"
-            },
-            {
-                "command": "difyassistant.askQuestion",
-                "title": "DIFY: Ask Question About Codebase"
-            },
-            {
-                "command": "difyassistant.openSidebar",
-                "title": "DIFY: Open DIFY Assistant Sidebar"
-            },
-            {
-                "command": "difyassistant.refreshTree",
-                "title": "DIFY: Refresh Project Structure"
-            }
-        ],
-        "menus": {
-            "view/title": [
-                {
-                    "command": "difyassistant.refreshTree",
-                    "when": "view == difyassistant.treeView",
-                    "group": "navigation"
+                    "id": "myView",
+                    "name": "My View"
                 }
             ]
         }
     },
     "scripts": {
-        "vscode:prepublish": "npm run compile",
         "compile": "tsc -p ./",
         "watch": "tsc -watch -p ./",
-        "lint": "eslint .",
-        "pretest": "npm run lint"
-    },
-    "dependencies": {
-        "axios": "^1.6.0",
-        "fs-extra": "^11.2.0",
-        "uuid": "^11.0.3"
+        "package": "vsce package"
     },
     "devDependencies": {
-        "@types/fs-extra": "^11.0.4",
-        "@types/glob": "^7.1.4",
-        "@types/node": "^16.18.0",
-        "@types/uuid": "^10.0.0",
-        "@types/vscode": "^1.60.0",
-        "@typescript-eslint/eslint-plugin": "^5.0.0",
-        "@typescript-eslint/parser": "^5.0.0",
-        "eslint": "^8.0.0",
-        "glob": "^7.1.7",
-        "typescript": "^4.4.4"
+        "typescript": "^5.0.0",
+        "@types/vscode": "^1.75.0"
+    },
+    "dependencies": {
+        "uuid": "^11.0.5"
     }
 }

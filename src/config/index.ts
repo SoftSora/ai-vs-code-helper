@@ -1,2 +1,1 @@
-export * from './constants';
-export * from './config.secure';
+export * from './config.secure'
