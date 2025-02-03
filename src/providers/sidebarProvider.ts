@@ -1,4 +1,3 @@
-// src/providers/SidebarProvider.ts
 import * as vscode from 'vscode';
 import { ProjectAnalyzer } from '../services';
 import { ExtensionState } from '../state';
@@ -21,20 +20,27 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     ): Promise<void> {
         this._view = webviewView;
 
-        // Set initial analyzing message before showing the webview
-        webviewView.webview.html = this._getAnalyzingHtml(webviewView.webview);
-
-        // Start project analysis immediately when view is resolved
-        await this._handleInitialAnalysis();
-
         webviewView.webview.options = {
             enableScripts: true,
             localResourceRoots: [this._extensionUri]
         };
+
+        // Set up message handling before starting analysis
+        webviewView.webview.onDidReceiveMessage(async (message) => {
+            if (message.command === 'analyzeProject') {
+                await this._handleInitialAnalysis();
+            }
+        });
+
+        // Start initial analysis
+        await this._handleInitialAnalysis();
     }
 
     private async _handleInitialAnalysis(): Promise<void> {
         if (!this._view) return;
+
+        // Show analyzing state first
+        this._view.webview.html = this._getAnalyzingHtml(this._view.webview);
 
         try {
             const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
@@ -50,17 +56,18 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
             this._state.setProjectStructure(projectStructure);
 
-            await vscode.window.showInformationMessage('Project analysis completed successfully');
-            
-            // Update webview with main content
             this._view.webview.html = this._getMainHtml(this._view.webview, projectStructure);
+            await vscode.window.showInformationMessage('Project analysis completed successfully');
 
-        } catch (error) {
+        } catch (error) 
+        {
+            console.log(error);
             const errorMessage = error instanceof Error ? error.message : 'An error occurred';
             vscode.window.showErrorMessage(`Analysis failed: ${errorMessage}`);
             
-            // Show error state in webview
-            this._view.webview.html = this._getErrorHtml(this._view.webview, errorMessage);
+            if (this._view) {
+                this._view.webview.html = this._getErrorHtml(this._view.webview, errorMessage);
+            }
         }
     }
 
@@ -129,11 +136,13 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     }
 
     private _getMainHtml(webview: vscode.Webview, projectStructure: any): string {
-        console.log("inside the project structure view");
         
         const nonce = getNonce();
-        console.log("inside the project structure view 2", nonce);
+        const fileCount = projectStructure?.files?.length || 0;
+        const dependencyCount = projectStructure?.packageDetails?.mainDependencies?.length || 0;
 
+        console.log("inside the project structure view", nonce);
+    
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -151,7 +160,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
                     textarea {
                         width: 100%;
-                        padding: 8px;
+                        padding: 10px;
                         min-height: 100px;
                         background-color: var(--vscode-input-background);
                         color: var(--vscode-input-foreground);
@@ -179,11 +188,10 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 </style>
             </head>
             <body>
-                <h3>Project Analyzer</h3>
+                <h3>Analysis Complete!</h3>
                 <div class="structure-info">
-                    <p>Analysis Complete!</p>
-                    <p>Total Files: ${projectStructure.files.length}</p>
-                    <p>Dependencies: ${Object.keys(projectStructure.dependencies).length}</p>
+                    <p>Total Files: ${fileCount}</p>
+                    <p>Dependencies: ${dependencyCount}</p>
                 </div>
                 <textarea placeholder="Enter your request..."></textarea>
                 <button onclick="analyzeProject()">Analyze Again</button>

@@ -1,16 +1,9 @@
-export interface FileInfo {
-    path: string;
-    name: string;
-    extension: string;
-    content: string;
-}
-
 export interface ProjectContext {
     files: FileInfo[];
-    summary: string;
-    mainTechnologies: string[];
-    folderStructure: string;
-    codePatterns: string[];
+    summary?: string;
+    mainTechnologies?: string[];
+    folderStructure?: string;
+    codePatterns?: string[];
     packageDetails: {
         name: string;
         version: string;
@@ -21,3 +14,9 @@ export interface ProjectContext {
     configFiles: string[];
 }
 
+export interface FileInfo {
+    path: string;
+    name: string;
+    extension: string;
+    content: string;
+}
