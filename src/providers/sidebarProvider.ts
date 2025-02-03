@@ -25,10 +25,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this._extensionUri]
         };
 
-        // Set up message handling before starting analysis
-        webviewView.webview.onDidReceiveMessage(async (message) => {
-            if (message.command === 'analyzeProject') {
-                await this._handleInitialAnalysis();
+            webviewView.webview.onDidReceiveMessage(async (message) => {
+            switch (message.command) {
+                case 'analyzeProject':
+                    await this._handleInitialAnalysis();
+                    break;
+                case 'reanalyzeProject':
+                    await this._handleReanalysis();
+                    break;
             }
         });
 
@@ -61,6 +65,33 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             console.log(error);
             const errorMessage = error instanceof Error ? error.message : 'An error occurred';
             vscode.window.showErrorMessage(`Analysis failed: ${errorMessage}`);
+
+            if (this._view) {
+                this._view.webview.html = this._getErrorHtml(this._view.webview, errorMessage);
+            }
+        }
+    }
+
+    private async _handleReanalysis(): Promise<void> {
+        if (!this._view) return;
+
+        this._view.webview.html = this._getAnalyzingHtml(this._view.webview);
+
+        try {
+            const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+            if (!workspaceRoot) {
+                throw new Error('No workspace folder found');
+            }
+
+            const projectStructure = await this._projectAnalyzer.analyzeProject(workspaceRoot);
+            this._state.setProjectStructure(projectStructure);
+            this._view.webview.html = this._getMainHtml(this._view.webview, projectStructure);
+            
+            await vscode.window.showInformationMessage('Project re-analysis completed successfully');
+        } catch (error) {
+            console.error('Re-analysis failed:', error);
+            const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+            vscode.window.showErrorMessage(`Re-analysis failed: ${errorMessage}`);
 
             if (this._view) {
                 this._view.webview.html = this._getErrorHtml(this._view.webview, errorMessage);
@@ -139,7 +170,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const devDependencies = projectStructure?.packageDetails?.devDependencies || [];
         const folderStructure = projectStructure?.folderStructure || '';
         const codePatterns = projectStructure?.codePatterns || [];
-    
+
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -160,6 +191,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         border: 1px solid var(--vscode-input-border);
                         border-radius: 4px;
                         overflow: hidden;
+                        max-width: 350px;
                     }
 
                     .main-header {
@@ -248,7 +280,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
     
                     textarea {
-                        width: 90%;
+                        width: 95%;    
+                        margin: 10px 0;
                         padding: 8px;
                         min-height: 100px;
                         background-color: var(--vscode-input-background);
@@ -262,6 +295,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         background-color: var(--vscode-button-background);
                         color: var(--vscode-button-foreground);
                         border: none;
+                        border-radius: 4px;
                         padding: 8px 16px;
                         cursor: pointer;
                         margin-bottom: 10px;
@@ -336,7 +370,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                 </div>
                             </div>
                         </div>
-                        <button onclick="analyzeProject()">Analyze Again</button>
+                        <button id="reanalyzeButton">Analyze Again</button>
                     </div>
                 </div>
 
@@ -347,6 +381,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     </div>
                     <div class="main-content" id="changes-content">
                         <textarea placeholder="Enter your request for change..."></textarea>
+                        <button>Send</button>
                     </div>
                 </div>
     
@@ -357,15 +392,14 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         
                         // Store section states for all sections including main sections
                         const sectionStates = {
-                            analysis: true,  // Main section
-                            changes: false,  // Main section
+                            analysis: true,
+                            changes: true,
                             technologies: true,
                             dependencies: false,
                             patterns: false,
                             structure: false
                         };
     
-                        // Add click handlers for all sections including main sections
                         document.querySelectorAll('.section-header, .main-header').forEach(header => {
                             header.addEventListener('click', () => {
                                 const sectionId = header.getAttribute('data-section');
@@ -386,7 +420,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             }
                         }
     
-                        // Initialize sections based on their states
                         Object.entries(sectionStates).forEach(([sectionId, isExpanded]) => {
                             const content = document.getElementById(sectionId + '-content');
                             const chevron = document.getElementById(sectionId + '-chevron');
@@ -397,16 +430,11 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             }
                         });
     
-                        window.analyzeProject = function() {
-                            const textarea = document.querySelector('textarea');
-                            const text = textarea.value.trim();
-                            if (text) {
-                                vscode.postMessage({
-                                    command: 'analyzeProject',
-                                    text: text
-                                });
-                            }
-                        };
+                        document.getElementById('reanalyzeButton').addEventListener('click', () => {
+                            vscode.postMessage({
+                                command: 'reanalyzeProject'
+                            });
+                        });
                     })();
                 </script>
             </body>
