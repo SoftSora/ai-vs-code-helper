@@ -123,7 +123,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             </head>
             <body>
                 <div class="analyzing-container">
-                    <h3>Please Wait</h3>
+                    <h4>Please Wait</h4>
                     <div class="spinner"></div>
                     <p>Analyzing project structure...</p>
                 </div>
@@ -134,7 +134,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
     private _getMainHtml(webview: vscode.Webview, projectStructure: any): string {
         const nonce = getNonce();
-        const fileCount = projectStructure?.files?.length || 0;
         const mainTechnologies = projectStructure?.mainTechnologies || [];
         const dependencies = projectStructure?.packageDetails?.mainDependencies || [];
         const devDependencies = projectStructure?.packageDetails?.devDependencies || [];
@@ -152,11 +151,41 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 <style>
                     body {
                         font-family: var(--vscode-font-family);
-                        padding: 20px;
                         color: var(--vscode-foreground);
                         background-color: var(--vscode-editor-background);
                     }
     
+                    .main-section {
+                        margin: 10px -15px;
+                        border: 1px solid var(--vscode-input-border);
+                        border-radius: 4px;
+                        overflow: hidden;
+                    }
+
+                    .main-header {
+                        background-color: var(--vscode-input-background);
+                        padding: 0 12px;
+                        cursor: pointer;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        user-select: none;
+                    }
+
+                    .main-header:hover {
+                        background-color: var(--vscode-list-hoverBackground);
+                    }
+
+                    .main-content {
+                        display: none;
+                        padding: 6px;
+                        border-top: 1px solid var(--vscode-input-border);
+                    }
+
+                    .main-content.expanded {
+                        display: block;
+                    }
+
                     .structure-info {
                         margin-bottom: 20px;
                     }
@@ -170,7 +199,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     
                     .section-header {
                         background-color: var(--vscode-input-background);
-                        padding: 8px 12px;
+                        padding: 0 12px;
                         cursor: pointer;
                         display: flex;
                         justify-content: space-between;
@@ -200,7 +229,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         background-color: var(--vscode-badge-background);
                         color: var(--vscode-badge-foreground);
                         border-radius: 4px;
-                        font-size: 12px;
+                        font-size: 10px;
                     }
     
                     .folder-tree {
@@ -241,8 +270,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     button:hover {
                         background-color: var(--vscode-button-hoverBackground);
                     }
-    
+
                     .chevron {
+                        font-size: 22px;
                         transition: transform 0.2s;
                     }
     
@@ -252,75 +282,91 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 </style>
             </head>
             <body>
-                <h3>Project Analysis Results</h3>
-                <div class="structure-info">
-                    <div class="section">
-                        <div class="section-header" data-section="technologies">
-                            <span>Technologies & Framework</span>
-                            <span class="chevron" id="technologies-chevron">›</span>
-                        </div>
-                        <div class="section-content" id="technologies-content">
-                            ${mainTechnologies.map((tech: string) => `<span class="tech-tag">${tech}</span>`).join('')}
-                        </div>
+                <div class="main-section">
+                    <div class="main-header" data-section="analysis">
+                        <h4>Project Analysis Results</h4>
+                        <span class="chevron" id="analysis-chevron">›</span>
                     </div>
-    
-                    <div class="section">
-                        <div class="section-header" data-section="dependencies">
-                            <span>Dependencies (${dependencies.length})</span>
-                            <span class="chevron" id="dependencies-chevron">›</span>
-                        </div>
-                        <div class="section-content" id="dependencies-content">
-                            <h4>Main Dependencies</h4>
-                            ${dependencies.map((dep: string) => `<div class="pattern-item">${dep}</div>`).join('')}
-                            ${devDependencies.length ? `
-                                <h4>Dev Dependencies</h4>
-                                ${devDependencies.map((dep: string) => `<div class="pattern-item">${dep}</div>`).join('')}
-                            ` : ''}
-                        </div>
-                    </div>
-    
-                    <div class="section">
-                        <div class="section-header" data-section="patterns">
-                            <span>Code Patterns</span>
-                            <span class="chevron" id="patterns-chevron">›</span>
-                        </div>
-                        <div class="section-content" id="patterns-content">
-                            ${codePatterns.map((pattern: string) => `<div class="pattern-item">${pattern}</div>`).join('')}
-                        </div>
-                    </div>
-    
-                    <div class="section">
-                        <div class="section-header" data-section="structure">
-                            <span>Folder Structure</span>
-                            <span class="chevron" id="structure-chevron">›</span>
-                        </div>
-                        <div class="section-content" id="structure-content">
-                            <div class="folder-tree">
-                                ${folderStructure.split('\n').map((line: string) => `<div class="folder-item">${line}</div>`).join('')}
+                    <div class="main-content" id="analysis-content">
+                        <div class="structure-info">
+                            <div class="section">
+                                <div class="section-header" data-section="technologies">
+                                    <span>Technologies & Framework</span>
+                                    <span class="chevron" id="technologies-chevron">›</span>
+                                </div>
+                                <div class="section-content" id="technologies-content">
+                                    ${mainTechnologies.map((tech: string) => `<span class="tech-tag">${tech}</span>`).join('')}
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-header" data-section="dependencies">
+                                    <span>Dependencies (${dependencies.length})</span>
+                                    <span class="chevron" id="dependencies-chevron">›</span>
+                                </div>
+                                <div class="section-content" id="dependencies-content">
+                                    <h4>Main Dependencies</h4>
+                                    ${dependencies.map((dep: string) => `<div class="pattern-item">${dep}</div>`).join('')}
+                                    ${devDependencies.length ? `
+                                        <h4>Dev Dependencies</h4>
+                                        ${devDependencies.map((dep: string) => `<div class="pattern-item">${dep}</div>`).join('')}
+                                    ` : ''}
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-header" data-section="patterns">
+                                    <span>Code Patterns</span>
+                                    <span class="chevron" id="patterns-chevron">›</span>
+                                </div>
+                                <div class="section-content" id="patterns-content">
+                                    ${codePatterns.map((pattern: string) => `<div class="pattern-item">${pattern}</div>`).join('')}
+                                </div>
+                            </div>
+
+                            <div class="section">
+                                <div class="section-header" data-section="structure">
+                                    <span>Folder Structure</span>
+                                    <span class="chevron" id="structure-chevron">›</span>
+                                </div>
+                                <div class="section-content" id="structure-content">
+                                    <div class="folder-tree">
+                                        ${folderStructure.split('\n').map((line: string) => `<div class="folder-item">${line}</div>`).join('')}
+                                    </div>
+                                </div>
                             </div>
                         </div>
+                        <button onclick="analyzeProject()">Analyze Again</button>
                     </div>
                 </div>
-    
-                <button onclick="analyzeProject()">Analyze Again</button>
 
-                <h3>Request Changes</h3>
-                <textarea placeholder="Enter your request for change..."></textarea>
+                <div class="main-section">
+                    <div class="main-header" data-section="changes">
+                        <h4>Request Changes</h4>
+                        <span class="chevron" id="changes-chevron">›</span>
+                    </div>
+                    <div class="main-content" id="changes-content">
+                        <textarea placeholder="Enter your request for change..."></textarea>
+                    </div>
+                </div>
     
                 <script nonce="${nonce}">
                     (function() {
                         // Initialize vscode API
                         const vscode = acquireVsCodeApi();
                         
-                        // Store section states
+                        // Store section states for all sections including main sections
                         const sectionStates = {
+                            analysis: true,  // Main section
+                            changes: false,  // Main section
                             technologies: true,
                             dependencies: false,
                             patterns: false,
                             structure: false
                         };
     
-                        document.querySelectorAll('.section-header').forEach(header => {
+                        // Add click handlers for all sections including main sections
+                        document.querySelectorAll('.section-header, .main-header').forEach(header => {
                             header.addEventListener('click', () => {
                                 const sectionId = header.getAttribute('data-section');
                                 if (sectionId) {
@@ -340,6 +386,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                             }
                         }
     
+                        // Initialize sections based on their states
                         Object.entries(sectionStates).forEach(([sectionId, isExpanded]) => {
                             const content = document.getElementById(sectionId + '-content');
                             const chevron = document.getElementById(sectionId + '-chevron');
@@ -392,7 +439,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                 </style>
             </head>
             <body>
-                <h3>Project Analyzer</h3>
+                <h4>Project Analyzer</h4>
                 <div class="error-container">
                     <h4>Error During Analysis</h4>
                     <p>${errorMessage}</p>
