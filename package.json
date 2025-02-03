@@ -1,7 +1,7 @@
 {
-    "name": "my-vscode-extension",
-    "displayName": "My VS Code Extension",
-    "description": "A basic VS Code extension with a Webview in the sidebar.",
+    "name": "intelli-gen-vscode-extension",
+    "displayName": "IntelliGen VS-Code Extension",
+    "description": "Auto Generating code when user request changes through extension.",
     "version": "0.0.1",
     "publisher": "arshed",
     "engines": {
@@ -29,7 +29,7 @@
                 {
                     "type": "webview",
                     "id": "mySidebarView",
-                    "name": "Side View"
+                    "name": "Side Panel"
                 }
             ]
         }
