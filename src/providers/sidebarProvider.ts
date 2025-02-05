@@ -25,13 +25,16 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             localResourceRoots: [this._extensionUri]
         };
 
-            webviewView.webview.onDidReceiveMessage(async (message) => {
+        webviewView.webview.onDidReceiveMessage(async (message) => {
             switch (message.command) {
                 case 'analyzeProject':
                     await this._handleInitialAnalysis();
                     break;
                 case 'reanalyzeProject':
                     await this._handleReanalysis();
+                    break;
+                case 'sendToDify':
+                    await this._handleDifyRequest(message.text);
                     break;
             }
         });
@@ -86,7 +89,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             const projectStructure = await this._projectAnalyzer.analyzeProject(workspaceRoot);
             this._state.setProjectStructure(projectStructure);
             this._view.webview.html = this._getMainHtml(this._view.webview, projectStructure);
-            
+
             await vscode.window.showInformationMessage('Project re-analysis completed successfully');
         } catch (error) {
             console.error('Re-analysis failed:', error);
@@ -96,6 +99,30 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
             if (this._view) {
                 this._view.webview.html = this._getErrorHtml(this._view.webview, errorMessage);
             }
+        }
+    }
+
+    private async _handleDifyRequest(text: string): Promise<void> {
+        if (!this._view) return;
+
+        try {
+            const projectStructure = this._state.getProjectStructure();
+            if (!projectStructure) {
+                throw new Error('No project structure available');
+            }
+
+            this._view.webview.postMessage({ type: 'setLoading', value: true });
+
+            const difyService = new DifyApiService();
+            const response = await difyService.getResponse(text, projectStructure);
+
+            await vscode.window.showInformationMessage(response.answer);
+
+        } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+            vscode.window.showErrorMessage(`Dify request failed: ${errorMessage}`);
+        } finally {
+            this._view?.webview.postMessage({ type: 'setLoading', value: false });
         }
     }
 
@@ -131,7 +158,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         display: flex;
                         flex-direction: column;
                         align-items: center;
-                        justify-content: center;
                         height: 100vh;
                         margin: 0;
                     }
@@ -380,8 +406,12 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         <span class="chevron" id="changes-chevron">›</span>
                     </div>
                     <div class="main-content" id="changes-content">
-                        <textarea placeholder="Enter your request for change..."></textarea>
-                        <button>Send</button>
+                        <textarea id="requestText" placeholder="Enter your request for change..."></textarea>
+                        <button id="sendButton">Send</button>
+                        <div id="loadingIndicator" style="display: none;">
+                            <div class="spinner"></div>
+                            <p>Processing request...</p>
+                        </div>
                     </div>
                 </div>
     

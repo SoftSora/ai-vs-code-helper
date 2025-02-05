@@ -10,7 +10,8 @@ export function activate(context: vscode.ExtensionContext) {
     const sidebarProvider = new SidebarProvider(
         context.extensionUri,
         state,
-        projectAnalyzer
+        projectAnalyzer,
+        context
     );
 
     context.subscriptions.push(
