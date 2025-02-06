@@ -116,7 +116,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
             const difyService = DifyApiService.getInstance(this._context);
             const response = await difyService.getResponse(text, projectStructure);
-
+            
+            console.log(response.answer);
             await vscode.window.showInformationMessage(response.answer);
 
         } catch (error) {

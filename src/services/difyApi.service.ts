@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { DIFY_API_KEY, DIFY_API_URL } from '../config';
-import { DifyResponse } from '../types';
+import { DifyResponse, ProjectContext } from '../types';
 
 export class DifyApiService {
     private static instance: DifyApiService | null = null;
@@ -17,7 +17,7 @@ export class DifyApiService {
         return DifyApiService.instance;
     }
 
-    public async getResponse(query: string, projectStructure: any): Promise<DifyResponse> {
+    public async getResponse(query: string, projectStructure: ProjectContext): Promise<DifyResponse> {
         try {
             const apiKey = await this.getSecureApiKey();
             
@@ -29,7 +29,7 @@ export class DifyApiService {
                 },
                 body: JSON.stringify({
                     inputs: {
-                        project_context: JSON.stringify(projectStructure)
+                        project_context: projectStructure.summary
                     },
                     query: query,
                     response_mode: "blocking",
