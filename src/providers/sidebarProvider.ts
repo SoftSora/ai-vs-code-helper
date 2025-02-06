@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { ProjectAnalyzer } from '../services';
+import { DifyApiService, ProjectAnalyzer } from '../services';
 import { ExtensionState } from '../state';
 import { getNonce } from '../utils';
 import { ProjectContext } from '../types';
@@ -10,7 +10,8 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     constructor(
         private readonly _extensionUri: vscode.Uri,
         private readonly _state: ExtensionState,
-        private readonly _projectAnalyzer: ProjectAnalyzer
+        private readonly _projectAnalyzer: ProjectAnalyzer,
+        private readonly _context: vscode.ExtensionContext
     ) { }
 
     public async resolveWebviewView(
@@ -113,7 +114,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
 
             this._view.webview.postMessage({ type: 'setLoading', value: true });
 
-            const difyService = new DifyApiService();
+            const difyService = DifyApiService.getInstance(this._context);
             const response = await difyService.getResponse(text, projectStructure);
 
             await vscode.window.showInformationMessage(response.answer);
@@ -196,7 +197,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
         const devDependencies = projectStructure?.packageDetails?.devDependencies || [];
         const folderStructure = projectStructure?.folderStructure || '';
         const codePatterns = projectStructure?.codePatterns || [];
-
+    
         return `
             <!DOCTYPE html>
             <html lang="en">
@@ -219,7 +220,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         overflow: hidden;
                         max-width: 350px;
                     }
-
+    
                     .main-header {
                         background-color: var(--vscode-input-background);
                         padding: 0 12px;
@@ -229,21 +230,21 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         align-items: center;
                         user-select: none;
                     }
-
+    
                     .main-header:hover {
                         background-color: var(--vscode-list-hoverBackground);
                     }
-
+    
                     .main-content {
                         display: none;
                         padding: 6px;
                         border-top: 1px solid var(--vscode-input-border);
                     }
-
+    
                     .main-content.expanded {
                         display: block;
                     }
-
+    
                     .structure-info {
                         margin-bottom: 20px;
                     }
@@ -270,10 +271,9 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     }
     
                     .section-content {
-                        padding: 12px;
                         display: none;
+                        padding: 12px;
                         border-top: 1px solid var(--vscode-input-border);
-                        background-color: var(--vscode-editor-background);
                     }
     
                     .section-content.expanded {
@@ -314,7 +314,6 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         color: var(--vscode-input-foreground);
                         border: 1px solid var(--vscode-input-border);
                         resize: vertical;
-                        margin-right: 10px;
                     }
     
                     button {
@@ -330,7 +329,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     button:hover {
                         background-color: var(--vscode-button-hoverBackground);
                     }
-
+    
                     .chevron {
                         font-size: 22px;
                         transition: transform 0.2s;
@@ -338,6 +337,25 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     
                     .chevron.expanded {
                         transform: rotate(90deg);
+                    }
+    
+                    .loading-indicator {
+                        text-align: center;
+                        margin-top: 10px;
+                    }
+    
+                    .spinner {
+                        width: 20px;
+                        height: 20px;
+                        border: 2px solid var(--vscode-button-background);
+                        border-radius: 50%;
+                        border-top-color: transparent;
+                        animation: spin 1s linear infinite;
+                        margin: 0 auto;
+                    }
+    
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
                     }
                 </style>
             </head>
@@ -358,7 +376,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                     ${mainTechnologies.map((tech: string) => `<span class="tech-tag">${tech}</span>`).join('')}
                                 </div>
                             </div>
-
+    
                             <div class="section">
                                 <div class="section-header" data-section="dependencies">
                                     <span>Dependencies (${dependencies.length})</span>
@@ -373,7 +391,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                     ` : ''}
                                 </div>
                             </div>
-
+    
                             <div class="section">
                                 <div class="section-header" data-section="patterns">
                                     <span>Code Patterns</span>
@@ -383,7 +401,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                                     ${codePatterns.map((pattern: string) => `<div class="pattern-item">${pattern}</div>`).join('')}
                                 </div>
                             </div>
-
+    
                             <div class="section">
                                 <div class="section-header" data-section="structure">
                                     <span>Folder Structure</span>
@@ -399,7 +417,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                         <button id="reanalyzeButton">Analyze Again</button>
                     </div>
                 </div>
-
+    
                 <div class="main-section">
                     <div class="main-header" data-section="changes">
                         <h4>Request Changes</h4>
@@ -408,7 +426,7 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
                     <div class="main-content" id="changes-content">
                         <textarea id="requestText" placeholder="Enter your request for change..."></textarea>
                         <button id="sendButton">Send</button>
-                        <div id="loadingIndicator" style="display: none;">
+                        <div id="loadingIndicator" class="loading-indicator" style="display: none;">
                             <div class="spinner"></div>
                             <p>Processing request...</p>
                         </div>
@@ -417,53 +435,92 @@ export class SidebarProvider implements vscode.WebviewViewProvider {
     
                 <script nonce="${nonce}">
                     (function() {
-                        // Initialize vscode API
                         const vscode = acquireVsCodeApi();
                         
-                        // Store section states for all sections including main sections
-                        const sectionStates = {
-                            analysis: true,
-                            changes: true,
-                            technologies: true,
-                            dependencies: false,
-                            patterns: false,
-                            structure: false
+                        const sections = {
+                            analysis: { expanded: true },
+                            changes: { expanded: true },
+                            technologies: { expanded: true },
+                            dependencies: { expanded: false },
+                            patterns: { expanded: false },
+                            structure: { expanded: false }
                         };
     
-                        document.querySelectorAll('.section-header, .main-header').forEach(header => {
-                            header.addEventListener('click', () => {
-                                const sectionId = header.getAttribute('data-section');
-                                if (sectionId) {
-                                    toggleSection(sectionId);
-                                }
-                            });
-                        });
-    
                         function toggleSection(sectionId) {
+                            const section = sections[sectionId];
+                            if (!section) return;
+    
+                            section.expanded = !section.expanded;
+                            
                             const content = document.getElementById(sectionId + '-content');
                             const chevron = document.getElementById(sectionId + '-chevron');
                             
-                            if (content && chevron) {
-                                sectionStates[sectionId] = !sectionStates[sectionId];
-                                content.classList.toggle('expanded', sectionStates[sectionId]);
-                                chevron.classList.toggle('expanded', sectionStates[sectionId]);
+                            if (content) {
+                                content.classList.toggle('expanded', section.expanded);
+                            }
+                            if (chevron) {
+                                chevron.classList.toggle('expanded', section.expanded);
                             }
                         }
     
-                        Object.entries(sectionStates).forEach(([sectionId, isExpanded]) => {
-                            const content = document.getElementById(sectionId + '-content');
-                            const chevron = document.getElementById(sectionId + '-chevron');
-                            
-                            if (content && chevron && isExpanded) {
-                                content.classList.add('expanded');
-                                chevron.classList.add('expanded');
+                        document.querySelectorAll('.section-header, .main-header').forEach(header => {
+                            const sectionId = header.getAttribute('data-section');
+                            if (sectionId) {
+                                header.addEventListener('click', () => {
+                                    toggleSection(sectionId);
+                                });
                             }
                         });
     
-                        document.getElementById('reanalyzeButton').addEventListener('click', () => {
-                            vscode.postMessage({
-                                command: 'reanalyzeProject'
+                        Object.entries(sections).forEach(([sectionId, section]) => {
+                            if (section.expanded) {
+                                const content = document.getElementById(sectionId + '-content');
+                                const chevron = document.getElementById(sectionId + '-chevron');
+                                
+                                if (content) {
+                                    content.classList.add('expanded');
+                                }
+                                if (chevron) {
+                                    chevron.classList.add('expanded');
+                                }
+                            }
+                        });
+    
+                        const reanalyzeButton = document.getElementById('reanalyzeButton');
+                        if (reanalyzeButton) {
+                            reanalyzeButton.addEventListener('click', () => {
+                                vscode.postMessage({
+                                    command: 'reanalyzeProject'
+                                });
                             });
+                        }
+    
+                        const sendButton = document.getElementById('sendButton');
+                        if (sendButton) {
+                            sendButton.addEventListener('click', () => {
+                                const textarea = document.getElementById('requestText');
+                                if (textarea && textarea.value.trim()) {
+                                    vscode.postMessage({
+                                        command: 'sendToDify',
+                                        text: textarea.value.trim()
+                                    });
+                                }
+                            });
+                        }
+    
+                        window.addEventListener('message', event => {
+                            const message = event.data;
+                            if (message.type === 'setLoading') {
+                                const loadingIndicator = document.getElementById('loadingIndicator');
+                                const sendButton = document.getElementById('sendButton');
+                                const textarea = document.getElementById('requestText');
+                                
+                                if (loadingIndicator && sendButton && textarea) {
+                                    loadingIndicator.style.display = message.value ? 'block' : 'none';
+                                    sendButton.disabled = message.value;
+                                    textarea.disabled = message.value;
+                                }
+                            }
                         });
                     })();
                 </script>
