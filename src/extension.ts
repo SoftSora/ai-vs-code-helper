@@ -1,60 +1,22 @@
 import * as vscode from 'vscode';
-import { DifyApiService, ProjectStructure, registerCommands, SidebarProvider, StatusBarManager } from './';
+import { SidebarProvider } from './providers';
+import { ProjectAnalyzer } from './services';
+import { ExtensionState } from './state';
 
-export let globalProjectStructure: ProjectStructure | null = null;
-
-export async function activate(context: vscode.ExtensionContext) {
-    await DifyApiService.initialize(context);
-    console.log("DIFY AI assistant is activated");
-
-    const sidebarProvider = new SidebarProvider(context.extensionUri, context);
-    context.subscriptions.push(
-        vscode.window.registerWebviewViewProvider(
-            SidebarProvider.viewType,
-            sidebarProvider
-        )
-    );
-
-    console.log("Sidebar provider registered");
-
-    await analyzeProjectOnStart(context);
-
-    registerCommands(context);
-    const statusBarManager = StatusBarManager.getInstance();
-    context.subscriptions.push(statusBarManager.getStatusBarItem());
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('difyassistant.openSidebar', () => {
-            vscode.commands.executeCommand('workbench.view.extension.difyassistant-sidebar');
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.workspace.onDidChangeWorkspaceFolders(async () => {
-            await analyzeProjectOnStart(context);
-        })
-    );
-}
-
-async function analyzeProjectOnStart(context: vscode.ExtensionContext) {
-    const FileSystemService = (await import('./services/fileSystem')).FileSystemService;
-    const fileSystemService = FileSystemService.getInstance();
+export function activate(context: vscode.ExtensionContext) {
+    const state = new ExtensionState(context);
+    const projectAnalyzer = new ProjectAnalyzer();
     
-    const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
-    if (workspaceRoot) {
-        try {
-            globalProjectStructure = await fileSystemService.analyzeProjectStructure(workspaceRoot);
-            console.log('Project structure analyzed on startup');
-            
-            const statusBarManager = StatusBarManager.getInstance();
-            statusBarManager.updateStatus('Project analyzed ✓');
-        } catch (error) {
-            console.error('Error analyzing project structure:', error);
-            vscode.window.showErrorMessage('Failed to analyze project structure on startup');
-        }
-    }
+    const sidebarProvider = new SidebarProvider(
+        context.extensionUri,
+        state,
+        projectAnalyzer,
+        context
+    );
+
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider('mySidebarView', sidebarProvider)
+    );
 }
 
-export function deactivate() {
-    globalProjectStructure = null;
-}
+export function deactivate() {}

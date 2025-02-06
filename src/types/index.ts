@@ -1,2 +1,2 @@
+export * from './project';
 export * from './dify.type';
-export * from './structure.type';
